@@ -1,0 +1,1182 @@
+# Display 3 - ePaper
+substitutions:
+  name: "esphome-21"
+  friendly_name: "ESPHOME 21"
+  area: "Living Room"
+
+esphome:
+  name: "${name}"
+
+esp32:
+  board: nodemcu-32s
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  manual_ip:
+    static_ip: !secret esphome_21_ip
+    subnet: !secret esphome_netmask
+    gateway: !secret esphome_gateway
+    dns1: !secret esphome_dns1
+
+  ap:
+    ssid: "${friendly_name} Fallback Hotspot"
+    password: !secret fallback
+
+captive_portal:
+
+logger:
+
+api:
+  encryption:
+    key: !secret encryption_key
+    
+ota:
+  platform: esphome
+  password: !secret ota
+
+button:
+  - platform: restart
+    name: "${name}: Restart"
+  - platform: shutdown
+    name: "${name}: Shutdown"
+  - platform: safe_mode
+    name: "${name}: Safe Mode"
+
+globals:
+  - id: update_needed
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: update_needed_initial
+    type: bool
+    restore_value: false
+    initial_value: 'true'
+
+time:
+  - platform: sntp
+    servers: !secret esphome_gateway
+    id: current_time
+  - platform: homeassistant
+    id: hass_time
+    timezone: America/New_York
+    on_time:
+      # 1 minute
+      - seconds: 0
+        then:
+          lambda: |-
+            if(id(update_needed_initial))
+            {
+              ESP_LOGI("Time", "Starting initial update");
+              
+              id(display1).update();
+
+              id(update_needed_initial) = false;
+            }
+      - minutes: /3
+        seconds: 0
+        then:
+          lambda: |-
+            if(id(update_needed))
+            {
+              ESP_LOGI("Time", "Starting update");
+
+              id(display1).update();
+              
+              id(update_needed) = false;
+            }
+      - minutes: /10
+        seconds: 0
+        then:
+          lambda: |-
+            id(update_needed) = true;
+
+font:
+  - file: "fonts/ComicMono.ttf"
+    id: font18
+    size: 18
+  - file: "fonts/ComicMono.ttf"
+    id: font20
+    size: 20
+  - file: "fonts/ComicMono.ttf"
+    id: font48
+    size: 48
+
+image:
+  binary:
+  # api
+    - id: icon_api
+      file: mdi:api
+      resize: 30x25
+    - id: icon_api_off
+      file: mdi:api-off
+      resize: 30x25
+  # network status
+    - id: icon_network_1
+      file: mdi:network-strength-1
+      resize: 20x20
+    - id: icon_network_2
+      file: mdi:network-strength-2
+      resize: 20x20
+    - id: icon_network_3
+      file: mdi:network-strength-3
+      resize: 20x20
+    - id: icon_network_4
+      file: mdi:network-strength-4
+      resize: 20x20
+    - id: icon_network_0
+      file: mdi:network-strength-outline
+      resize: 20x20
+    - id: icon_network_off
+      file: mdi:network-strength-off-outline
+      resize: 20x20
+  # sun
+    - id: icon_sunrise
+      file: mdi:weather-sunset-up
+      resize: 30x30
+    - id: icon_sunset
+      file: mdi:weather-sunset-down
+      resize: 30x30
+    - id: icon_dawn
+      file: mdi:weather-sunny
+      resize: 30x30
+    - id: icon_dusk
+      file: mdi:weather-night
+      resize: 30x30
+  # icons
+    - id: icon_ghost
+      file: mdi:ghost
+      resize: 50x50
+    - id: icon_rubber_duck
+      file: mdi:duck
+      resize: 50x50
+    - id: icon_space_invaders
+      file: mdi:space-invaders
+      resize: 50x50
+    - id: icon_triforce
+      file: mdi:triforce
+      resize: 50x50
+    - id: icon_yin_yang
+      file: mdi:yin-yang
+      resize: 50x50
+    - id: icon_gamepad
+      file: mdi:gamepad-square-outline
+      resize: 50x50
+    - id: icon_hike
+      file: mdi:forest
+      resize: 50x50
+    - id: icon_bat
+      file: mdi:bat
+      resize: 50x50
+    - id: icon_fish
+      file: mdi:fish
+      resize: 50x50
+    - id: icon_omega
+      file: mdi:omega
+      resize: 50x50
+  # pollen
+    - id: icon_tree
+      file: mdi:tree
+      resize: 64x64
+    - id: icon_grass
+      file: mdi:grass
+      resize: 64x64
+    - id: icon_weed
+      file: mdi:flower-pollen
+      resize: 64x64
+  # moon
+    - id: icon_moon_first_quarter
+      file: mdi:moon-first-quarter
+      resize: 64x64
+    - id: icon_moon_full
+      file: mdi:moon-full
+      resize: 64x64
+    - id: icon_moon_full_small
+      file: mdi:moon-full
+      resize: 16x16
+    - id: icon_moon_last_quarter
+      file: mdi:moon-last-quarter
+      resize: 64x64
+    - id: icon_moon_new
+      file: mdi:moon-new
+      resize: 64x64
+    - id: icon_moon_new_small
+      file: mdi:moon-new
+      resize: 16x16
+    - id: icon_moon_waning_crescent
+      file: mdi:moon-waning-crescent
+      resize: 64x64
+    - id: icon_moon_waxing_crescent
+      file: mdi:moon-waxing-crescent
+      resize: 64x64
+    - id: icon_moon_waning_gibbous
+      file: mdi:moon-waning-gibbous
+      resize: 64x64
+    - id: icon_moon_waxing_gibbous
+      file: mdi:moon-waxing-gibbous
+      resize: 64x64
+  # zodiac
+    - id: icon_zodiac_aquarius
+      file: mdi:zodiac-aquarius
+      resize: 64x64
+    - id: icon_zodiac_aries
+      file: mdi:zodiac-aries
+      resize: 64x64
+    - id: icon_zodiac_cancer
+      file: mdi:zodiac-cancer
+      resize: 64x64
+    - id: icon_zodiac_capricorn
+      file: mdi:zodiac-capricorn
+      resize: 64x64
+    - id: icon_zodiac_gemini
+      file: mdi:zodiac-gemini
+      resize: 64x64
+    - id: icon_zodiac_leo
+      file: mdi:zodiac-leo
+      resize: 64x64
+    - id: icon_zodiac_libra
+      file: mdi:zodiac-libra
+      resize: 64x64
+    - id: icon_zodiac_pisces
+      file: mdi:zodiac-pisces
+      resize: 64x64
+    - id: icon_zodiac_sagittarius
+      file: mdi:zodiac-sagittarius
+      resize: 64x64
+    - id: icon_zodiac_scorpio
+      file: mdi:zodiac-scorpio
+      resize: 64x64
+    - id: icon_zodiac_taurus
+      file: mdi:zodiac-taurus
+      resize: 64x64
+    - id: icon_zodiac_virgo
+      file: mdi:zodiac-virgo
+      resize: 64x64
+  # main display
+    - id: icon_humidity
+      file: mdi:water-percent
+      resize: 64x64
+    - id: icon_temperature
+      file: mdi:thermometer
+      resize: 64x64
+    - id: icon_temperature_high
+      file: mdi:thermometer-high
+      resize: 64x64
+    - id: icon_temperature_low
+      file: mdi:thermometer-low
+      resize: 64x64
+  # season
+    - id: icon_autumn
+      file: mdi:leaf
+      resize: 64x64
+    - id: icon_winter
+      file: mdi:snowflake
+      resize: 64x64
+    - id: icon_spring
+      file: mdi:flower-tulip
+      resize: 64x64
+    - id: icon_summer
+      file: mdi:sunglasses
+      resize: 64x64
+  # weather
+    - id: icon_weather_cloudy
+      file: mdi:weather-cloudy
+      resize: 64x64
+    - id: icon_weather_fog
+      file: mdi:weather-fog
+      resize: 64x64
+    - id: icon_weather_hail
+      file: mdi:weather-hail
+      resize: 64x64
+    - id: icon_weather_lightning_rainy
+      file: mdi:weather-lightning-rainy
+      resize: 64x64
+    - id: icon_weather_lightning
+      file: mdi:weather-lightning
+      resize: 64x64
+    - id: icon_weather_clear_night
+      file: mdi:weather-night
+      resize: 64x64
+    - id: icon_weather_night_partly_cloudy
+      file: mdi:weather-night-partly-cloudy
+      resize: 64x64
+    - id: icon_weather_partly_cloudy
+      file: mdi:weather-partly-cloudy
+      resize: 64x64
+    - id: icon_weather_pouring
+      file: mdi:weather-pouring
+      resize: 64x64
+    - id: icon_weather_rainy
+      file: mdi:weather-rainy
+      resize: 64x64
+    - id: icon_weather_snowy
+      file: mdi:weather-snowy
+      resize: 64x64
+    - id: icon_weather_snowy_rainy
+      file: mdi:weather-snowy-rainy
+      resize: 64x64
+    - id: icon_weather_sunny
+      file: mdi:weather-sunny
+      resize: 64x64
+    - id: icon_weather_windy
+      file: mdi:weather-windy
+      resize: 64x64
+    - id: icon_weather_exceptional
+      file: mdi:weather-sunny-alert
+      resize: 64x64
+
+sensor:
+  - platform: wifi_signal
+    name: "${name}: RSSI"
+    #update_interval: 15s
+    id: wifi_sig
+  - platform: homeassistant
+    entity_id: weather.porch
+    attribute: temperature
+    id: porch_temperature
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: weather.porch
+    attribute: humidity
+    id: porch_humidity
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: input_number.weather_forecast_low
+    id: forecast_low
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: input_number.weather_forecast_high
+    id: forecast_high
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.sun_dawn_minutes
+    id: dawn_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_sunrise_minutes
+    id: sunrise_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_sunset_minutes
+    id: sunset_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_dusk_minutes
+    id: dusk_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_solar_noon_minutes
+    id: solar_noon_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.now_minutes
+    id: now_minutes
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.moon_new_next_days
+    id: moon_new_next
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.moon_full_next_days
+    id: moon_full_next
+    internal: true
+
+binary_sensor:
+  - platform: status
+    name: "${name}: Status"
+  - platform: homeassistant
+    entity_id: input_boolean.epaper_display_active
+    id: is_active
+    internal: True
+    on_state:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: input_boolean.epaper_display_inverted
+    id: is_inverted
+    internal: True
+    on_state:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+
+text_sensor:
+  - platform: version
+    name: "${name}: Version"
+  - platform: homeassistant
+    entity_id: sensor.zodiac
+    id: zodiac
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.zodiac
+    attribute: element
+    id: zodiac_element
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.zodiac
+    id: zodiac_text
+    internal: true
+    filters:
+      - to_upper:
+  - platform: homeassistant
+    entity_id: sensor.moon
+    id: moon
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.moon
+    id: moon_text
+    internal: true
+    filters:
+      - to_upper:
+  - platform: homeassistant
+    entity_id: sensor.astronomical_season
+    id: astronomical_season
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.astronomical_season
+    id: astronomical_season_text
+    internal: true
+    filters:
+      - to_upper:
+  - platform: homeassistant
+    entity_id: input_select.epaper_display_icon
+    id: filler_icon
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.sun_sunrise
+    id: sunrise
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_sunset
+    id: sunset
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_dusk
+    id: dusk
+    internal: true
+  - platform: homeassistant
+    entity_id: sensor.sun_dawn
+    id: dawn
+    internal: true
+  - platform: homeassistant
+    entity_id: weather.porch
+    id: weather
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.countdown_date_one
+    id: countdown
+    internal: True
+  - platform: homeassistant
+    entity_id: sensor.pollen_tree_level
+    id: tree_pollen
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.pollen_weed_level
+    id: weed_pollen
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+  - platform: homeassistant
+    entity_id: sensor.pollen_grass_level
+    id: grass_pollen
+    internal: true
+    on_value:
+      then:
+        lambda: |-
+          id(update_needed) = true;
+
+external_components:
+  source: github://darthsebulba04/esphome@point
+  components: [ display ]
+
+spi:
+  clk_pin: GPIO18 # YELLOW
+  mosi_pin: GPIO23 # BLUE
+
+display:
+  - platform: waveshare_epaper
+    id: display1
+    cs_pin: GPIO5 # ORANGE
+    dc_pin: GPIO21 # GREEN
+    busy_pin:
+      inverted: true
+      number: GPIO19 # PURPLE
+    reset_pin: GPIO22 # WHITE
+    model: 7.30in-f
+    update_interval: never
+    auto_clear_enabled: true
+    rotation: 90
+    lambda: |-
+      ESP_LOGI("display", "Updating.. ");
+      
+      if(!id(is_active).state)
+        return;
+
+      int x, y;
+      int x1, y1;
+      int w, h;
+      
+      w = it.get_width();
+      h = it.get_height();
+
+      const auto BLACK   = Color(0,   0,   0,   0);
+      const auto RED     = Color(255, 0,   0,   0);
+      const auto GREEN   = Color(0,   255, 0,   0);
+      const auto BLUE    = Color(0,   0,   255, 0);
+      const auto YELLOW  = Color(255, 255, 0,   0);
+      const auto ORANGE  = Color(255, 127, 0,   0);
+      const auto WHITE   = Color(255, 255, 255, 0);
+
+      auto FOREGROUND = BLACK;
+      auto BACKGROUND = WHITE;
+ 
+      if(id(is_inverted).state) {
+        FOREGROUND = WHITE;
+        BACKGROUND = BLACK;
+      }
+
+      // Arrays
+
+      std::map<std::string, esphome::image::Image*> weather_map = {
+        {"cloudy", icon_weather_cloudy},
+        {"fog", icon_weather_fog},
+        {"hail", icon_weather_hail},
+        {"lightning-rainy", icon_weather_lightning_rainy},
+        {"lightning", icon_weather_lightning},
+        {"clear-night", icon_weather_clear_night},
+        {"partlycloudy", icon_weather_partly_cloudy},
+        {"pouring", icon_weather_pouring},
+        {"rainy", icon_weather_rainy},
+        {"snowy", icon_weather_snowy},
+        {"snowy-rainy", icon_weather_snowy_rainy},
+        {"sunny", icon_weather_sunny},
+        {"windy", icon_weather_windy},
+        {"exceptional", icon_weather_exceptional},
+        {"winter_mix", icon_weather_snowy_rainy}
+      };
+
+      std::map<std::string, esphome::image::Image*> moon_map = {
+        {"full_moon", icon_moon_full},
+        {"new_moon", icon_moon_new},
+        {"waxing_gibbous", icon_moon_waxing_gibbous},
+        {"waning_gibbous", icon_moon_waning_gibbous},
+        {"waxing_crescent", icon_moon_waxing_crescent},
+        {"waning_crescent", icon_moon_waning_crescent},
+        {"first_quarter", icon_moon_first_quarter},
+        {"last_quarter", icon_moon_last_quarter}
+      };
+
+      std::map<std::string, esphome::image::Image*> zodiac_map = {
+        {"aquarius", icon_zodiac_aquarius},
+        {"aries", icon_zodiac_aries},
+        {"cancer", icon_zodiac_cancer},
+        {"capricorn", icon_zodiac_capricorn},
+        {"gemini", icon_zodiac_gemini},
+        {"leo", icon_zodiac_leo},
+        {"libra", icon_zodiac_libra},
+        {"pisces", icon_zodiac_pisces},
+        {"sagittarius", icon_zodiac_sagittarius},
+        {"scorpio", icon_zodiac_scorpio},
+        {"taurus", icon_zodiac_taurus},
+        {"virgo", icon_zodiac_virgo}
+      };
+
+      std::map<std::string, esphome::Color> zodiac_element_map = {
+        {"fire", RED},
+        {"earth", YELLOW},
+        {"air", BLUE},
+        {"water", GREEN}
+      };
+
+      std::map<std::string, esphome::image::Image*> season_map = {
+        {"winter", icon_winter},
+        {"summer", icon_summer},
+        {"autumn", icon_autumn},
+        {"spring", icon_spring}
+      };
+
+      std::map<std::string, esphome::Color> season_color_map = {
+        {"winter", BLUE},
+        {"summer", ORANGE},
+        {"spring", GREEN},
+        {"autumn", RED}
+      };
+
+      std::map<std::string, esphome::image::Image*> icon_map = {
+        {"triforce", icon_triforce},
+        {"ghost", icon_ghost},
+        {"yin_yang", icon_yin_yang},
+        {"space_invaders", icon_space_invaders},
+        {"rubber_duck", icon_rubber_duck},
+        {"gamepad", icon_gamepad},
+        {"hike", icon_hike},
+        {"bat", icon_bat},
+        {"fish", icon_fish},
+        {"omega", icon_omega}
+      };
+
+      std::map<std::string, esphome::Color> icon_color_map = {
+        {"triforce", YELLOW},
+        {"ghost", FOREGROUND},
+        {"yin_yang", FOREGROUND},
+        {"space_invaders", GREEN},
+        {"rubber_duck", YELLOW},
+        {"gamepad", FOREGROUND},
+        {"hike", GREEN},
+        {"bat", FOREGROUND},
+        {"fish", BLUE},
+        {"omega", RED}
+      };
+
+      std::map<std::string, esphome::Color> pollen_color_map = {
+        {"very-high", RED},
+        {"high", ORANGE},
+        {"moderate", YELLOW},
+        {"low", GREEN}
+      };
+
+      it.fill(BACKGROUND);
+
+      it.line(0, 25, w, 25, FOREGROUND);
+
+      // Offset lines by 16px per character in the word
+
+      x = 0, y = 100;
+      it.print(x, y, id(font20), FOREGROUND, "PORCH");
+      x1 = x + (5 * 16), y1 = y + 10;
+      it.line(x1, y1, w, y1, FOREGROUND);
+
+      y = y + 100;
+      it.print(x, y, id(font20), FOREGROUND, "FORECAST");
+      x1 = x + (8 * 16), y1 = y + 10;
+      it.line(x1, y1, w, y1, FOREGROUND);
+
+      y = y + 100;
+      it.print(x, y, id(font20), FOREGROUND, "POLLEN");
+      x1 = x + (6 * 16), y1 = y + 10;
+      it.line(x1, y1, w, y1, FOREGROUND);
+
+      // Date
+      
+      x = 5, y = 0;
+      it.strftime(x, y, id(font20), FOREGROUND, TextAlign::TOP_LEFT, "%m-%d-%Y %H:%M", id(current_time).now());
+
+      // WiFi Signal
+
+      x = w, y = 0;
+      if (id(wifi_sig).has_state()) {
+          if (id(wifi_sig).state >= -50) {
+              it.image(x, y, id(icon_network_4), ImageAlign::TOP_RIGHT, GREEN, BACKGROUND);
+              ESP_LOGI("WiFi", "exellent");
+          } else if (id(wifi_sig).state  >= -60) {
+              it.image(x, y, id(icon_network_3), ImageAlign::TOP_RIGHT, GREEN, BACKGROUND);
+              ESP_LOGI("WiFi", "good");
+          } else if (id(wifi_sig).state  >= -67) {
+              it.image(x, y, id(icon_network_2), ImageAlign::TOP_RIGHT, YELLOW, BACKGROUND);
+              ESP_LOGI("WiFi", "fair");
+          } else if (id(wifi_sig).state  >= -70) {
+              it.image(x, y, id(icon_network_1), ImageAlign::TOP_RIGHT, RED, BACKGROUND);
+              ESP_LOGI("WiFi", "weak");
+          } else {
+              it.image(x, y, id(icon_network_0), ImageAlign::TOP_RIGHT, RED, BACKGROUND);
+              ESP_LOGI("WiFi", "unlikely");
+          }
+      } else {
+        it.image(x, y, id(icon_network_off), ImageAlign::TOP_RIGHT, RED, BACKGROUND);
+        ESP_LOGI("WiFi", "disconnected");
+      }
+
+      // Porch
+      
+      // Temperature
+
+      auto CURRENT_TEMPERATURE_COLOR = FOREGROUND;
+      auto CURRENT_WEATHER_COLOR = FOREGROUND;
+      if(id(porch_temperature).state < 60) {
+        CURRENT_TEMPERATURE_COLOR = BLUE;
+        CURRENT_WEATHER_COLOR = BLUE;
+      } else if(id(porch_temperature).state >= 60 && 
+          id(porch_temperature).state <= 90) {
+        CURRENT_TEMPERATURE_COLOR = ORANGE;
+        CURRENT_WEATHER_COLOR = ORANGE;
+      } else {
+        CURRENT_TEMPERATURE_COLOR = RED;
+        CURRENT_WEATHER_COLOR = RED;
+      }
+      
+      x = 10, y = 35;
+      if(id(porch_temperature).has_state()) {
+        if(id(weather).has_state()) {
+          #define weather_str id(weather)->state
+          ESP_LOGI("Weather", "%s", id(weather).state.c_str());
+
+          if(weather_map.count(weather_str)) {
+            it.image(x, y, id(&weather_map[weather_str]), CURRENT_WEATHER_COLOR, BACKGROUND);
+          } else {
+            it.image(x, y, id(icon_temperature), CURRENT_WEATHER_COLOR, BACKGROUND);
+          }
+        } else {
+          it.image(x, y, id(icon_temperature), CURRENT_WEATHER_COLOR, BACKGROUND);
+        }
+
+        x1 = x + 69, y1 = y + 5;
+        it.printf(x1, y1, id(font48), CURRENT_TEMPERATURE_COLOR, "%.1f°", id(porch_temperature).state);
+      }
+
+      // Humidity
+
+      auto HUMIDITY_COLOR = FOREGROUND;
+      
+      x = x1 + 150 + 5;
+      if(id(porch_humidity).has_state()) {
+        it.image(x, y, id(icon_humidity), HUMIDITY_COLOR, BACKGROUND);
+        
+        x1 = x + 69, y1 = y + 5;
+        it.printf(x1, y1, id(font48), HUMIDITY_COLOR, "%.0f%%", id(porch_humidity).state);
+      }
+      
+      // Forecast
+      
+      // High
+      
+      auto FORECAST_HIGH_COLOR = ORANGE;
+
+      x = 10, y = y + 90;
+      if(id(forecast_high).has_state()) {
+        it.image(x, y, id(icon_temperature_high), FORECAST_HIGH_COLOR, BACKGROUND);
+        
+        x1 = x + 69, y1 = y + 5;
+        it.printf(x1, y1, id(font48), FORECAST_HIGH_COLOR, "%.0f°", id(forecast_high).state);
+      }
+      
+      // Low
+
+      auto FORECAST_LOW_COLOR = BLUE;
+
+      x = x1 + 150 + 5;
+      if(id(forecast_low).has_state()) {
+        it.image(x, y, id(icon_temperature_low), FORECAST_LOW_COLOR, BACKGROUND);
+        
+        x1 = x + 69, y1 = y + 5;
+        it.printf(x1, y1, id(font48), FORECAST_LOW_COLOR, "%.0f°", id(forecast_low).state);
+      }
+
+      // Pollen
+
+      auto TREE_POLLEN_COLOR = FOREGROUND;
+      
+      x = 20, y = y + 110;
+      if(id(tree_pollen).has_state()) {
+        #define tree_pollen_str id(tree_pollen)->state
+        ESP_LOGI("Pollen", "Tree %s", id(tree_pollen).state.c_str());
+        
+        it.image(x, y, id(icon_tree), id(&pollen_color_map[tree_pollen_str]), BACKGROUND);
+      }
+
+      auto GRASS_POLLEN_COLOR = FOREGROUND;
+      
+      x = (w / 2) - 32;
+      if(id(grass_pollen).has_state()) {
+        #define grass_pollen_str id(grass_pollen)->state
+        ESP_LOGI("Pollen", "Grass %s", id(grass_pollen).state.c_str());
+
+        it.image(x, y, id(icon_grass), id(&pollen_color_map[grass_pollen_str]), BACKGROUND);
+      }
+
+      auto WEED_POLLEN_COLOR = FOREGROUND;
+
+      x = w - 64 - 20;
+      if(id(weed_pollen).has_state()) {
+        #define weed_pollen_str id(weed_pollen)->state
+        ESP_LOGI("Pollen", "Weed %s", id(weed_pollen).state.c_str());
+
+        it.image(x, y, id(icon_weed), id(&pollen_color_map[weed_pollen_str]), BACKGROUND);
+      }
+
+      // Moon
+
+      auto MOON_COLOR = FOREGROUND;
+
+      x = 20, y = y + 110;
+      if(id(moon).has_state()) {
+        #define moon_str id(moon)->state
+        ESP_LOGI("Moon", "%s", id(moon).state.c_str());
+
+        if(moon_map.count(moon_str)) {
+          it.image(x, y, id(&moon_map[moon_str]), MOON_COLOR, BACKGROUND);
+
+          x1 = x + 32, y1 = y + 32;
+          if(moon_str != "new_moon") {
+            it.circle(x1, y1, 30, MOON_COLOR);
+            it.circle(x1, y1, 29, MOON_COLOR);
+            it.circle(x1, y1, 28, MOON_COLOR);
+            it.circle(x1, y1, 27, MOON_COLOR);
+            it.circle(x1, y1, 26, MOON_COLOR);
+          }
+        }
+
+        y1 = y + 84;
+
+        // https://community.home-assistant.io/t/esphome-replace-with-a-new-line-n/545403/14
+        // Split into lines where underscore is delimiter
+        std::string str1 = id(moon_text).state;
+        std::string delimiter1 = "_";
+        std::size_t curPos1 = 0, delPos1 = 0;
+        while (delPos1 != std::string::npos) {
+          delPos1 = str1.find(delimiter1, curPos1);
+          it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "%s", str1.substr(curPos1, delPos1 - curPos1).c_str());
+          y1 += 18;
+          curPos1 = delPos1 + delimiter1.size();
+        }
+        
+        x = 5, y1 = y1 - 8;
+        x1 = x1 + 8;
+        if(id(moon_full_next).has_state()) {
+          ESP_LOGI("Moon", "Next Full %.0f", id(moon_full_next).state);
+          it.image(x, y1, id(icon_moon_full_small), MOON_COLOR, BACKGROUND);
+          y1 = y1 + 8;
+          it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "%.0f days", id(moon_full_next).state);
+          /*if(id(moon_full_next).state > 1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "%.0f days", id(moon_full_next).state);
+          } else if(id(moon_full_next).state == 1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "tomor");
+          } else if(id(moon_full_next).state == 0) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "today");
+          } else if(id(moon_full_next).state == -1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "yestr");
+          }*/
+        }
+
+        y1 = y1 + 10;
+        if(id(moon_new_next).has_state()) {
+          ESP_LOGI("Moon", "Next New %.0f", id(moon_new_next).state);
+          it.image(x, y1, id(icon_moon_new_small), MOON_COLOR, BACKGROUND);
+          y1 = y1 + 8;
+          it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "%.0f days", id(moon_new_next).state);
+          /*if(id(moon_new_next).state > 1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "%.0f days", id(moon_new_next).state);
+          } else if(id(moon_new_next).state == 1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "tomor");
+          } else if(id(moon_new_next).state == 0) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "today");
+          } else if(id(moon_new_next).state == -1) {
+            it.printf(x1, y1, id(font18), MOON_COLOR, TextAlign::CENTER, "yestr");
+          }*/
+        }
+      }
+
+      // Zodiac
+
+      x = (w / 2) - 32;
+      if (id(zodiac).has_state()) {
+        #define zodiac_str id(zodiac)->state
+        #define zodiac_element_str id(zodiac_element)->state
+
+        ESP_LOGI("Zodiac", "%s", id(zodiac).state.c_str());
+        ESP_LOGI("Zodiac", "%s", id(zodiac_element).state.c_str());
+
+        if(zodiac_map.count(zodiac_str) && 
+            zodiac_element_map.count(zodiac_element_str)) {
+          it.image(x, y, id(&zodiac_map[zodiac_str]), id(&zodiac_element_map[zodiac_element_str]), BACKGROUND);
+
+          x1 = x + 32, y1 = y + 84;
+          it.printf(x1, y1, id(font18), id(&zodiac_element_map[zodiac_element_str]), TextAlign::CENTER, "%s", id(zodiac_text).state.c_str());
+        }
+      }
+
+      // Season
+
+      x = w - 64 - 20;
+      if (id(astronomical_season).has_state()) {
+        #define season_str id(astronomical_season)->state
+        ESP_LOGI("Season", "%s", id(astronomical_season).state.c_str());
+        if(season_map.count(season_str) &&
+            season_color_map.count(season_str)) {
+          it.image(x, y, id(&season_map[season_str]), id(&season_color_map[season_str]), BACKGROUND);
+          
+          x1 = x + 32, y1 = y + 84;
+          it.printf(x1, y1, id(font18), id(&season_color_map[season_str]), TextAlign::CENTER, "%s", id(astronomical_season_text).state.c_str());
+        }
+      }
+
+      // Sun position
+
+      // Divide by 3 because 1440 mins per 24 hour day and 480px display width is 3px per minute
+      int DIVIDER = 3;
+      int sunrise_px,
+          sunset_px,
+          dusk_px,
+          dawn_px,
+          noon_px,
+          now_px,
+          center_px,
+          offset,
+          day_length,
+          horizon,
+          sun_x,
+          sun_y;
+
+      center_px  = w / 2;
+      sunrise_px = id(sunrise_minutes).state / DIVIDER;
+      sunset_px  = id(sunset_minutes).state / DIVIDER;
+      dusk_px    = id(dusk_minutes).state / DIVIDER;
+      dawn_px    = id(dawn_minutes).state / DIVIDER;
+      now_px     = id(now_minutes).state / DIVIDER;
+      noon_px    = id(solar_noon_minutes).state / DIVIDER;
+      offset     = abs(center_px - noon_px);
+      day_length = sunset_px - sunrise_px;
+ 
+      // Horizon
+
+      x = 0, y = h - sunrise_px - 25;
+      horizon = y;
+      it.line(x, horizon, w, horizon, GREEN);
+
+      sun_x = 0, sun_y = horizon;
+      int radius, dx, dy, err, e2, center_x, p_xp, p_xn, p_yn, p_yp;
+
+      // Sun - Below horizon - Morning
+
+      radius = sunrise_px;
+      dx = -radius;
+      dy = 0;
+      err = 2 - 2 * radius;
+      center_x = 0;
+
+      do {
+        p_xn = center_x - dx;
+        p_yp = y + dy;
+
+        // Curve
+        it.point(p_xn, p_yp, GREEN);
+
+        // Filler
+        if(p_xn <= now_px) {
+          it.line(p_xn, y, p_xn, p_yp, GREEN);
+        }
+
+        // Sun
+        if(now_px == p_xn) {
+          ESP_LOGI("Sun", "%d,%d", p_xn, p_yp);
+          sun_x = p_xn;
+          sun_y = p_yp;
+        }
+
+        e2 = err;
+        if (e2 < dy) {
+          err += ++dy * 2 + 1;
+          if (-dx == dy && e2 <= dx) {
+            e2 = 0;
+          }
+        }
+        if (e2 > dx) {
+          err += ++dx * 2 + 1;
+        }
+      } while (dx <= 0);
+
+      // Sun - On Horizon - Sunrise
+
+      if(now_px == sunrise_px) {
+          ESP_LOGI("Sun", "%d,%d", sunrise_px, y);
+          sun_x = sunrise_px;
+          sun_y = horizon;
+      }
+
+      // Sun - Above horizon
+
+      radius = day_length/2;
+      dx = -radius;
+      dy = 0;
+      err = 2 - 2 * radius;
+      center_x = noon_px;
+
+      do {
+        p_xp = center_x + dx;
+        p_xn = center_x - dx;
+        p_yn = y - dy;
+
+        // Curve
+        it.point(p_xp, p_yn, GREEN);
+        it.point(p_xn, p_yn, GREEN);
+
+        // Filler
+        if(p_xp <= now_px) {
+          it.line(p_xp, y, p_xp, p_yn, GREEN);
+        }
+        if(p_xn <= now_px) {
+          it.line(p_xn, y, p_xn, p_yn, GREEN);
+        }
+
+        // Sun
+        if(now_px == p_xp) {
+          ESP_LOGI("Sun", "%d,%d", p_xp, p_yn);
+          sun_x = p_xp;
+          sun_y = p_yn;
+        } else if (now_px == p_xn) {
+          ESP_LOGI("Sun", "%d,%d", p_xn, p_yn);
+          sun_x = p_xn;
+          sun_y = p_yn;
+        }
+
+        e2 = err;
+        if (e2 < dy) {
+          err += ++dy * 2 + 1;
+          if (-dx == dy && e2 <= dx) {
+            e2 = 0;
+          }
+        }
+        if (e2 > dx) {
+          err += ++dx * 2 + 1;
+        }
+      } while (dx <= 0);
+
+      // Sun - On horizon - Sunset
+
+      if(now_px == sunset_px) {
+          ESP_LOGI("Sun", "%d,%d", sunset_px, y);
+          sun_x = sunset_px;
+          sun_y = horizon;
+      }
+
+      // Sun - Below horizon - Night
+
+      radius = (w - sunset_px);
+      dx = -radius;
+      dy = 0;
+      err = 2 - 2 * radius;
+      center_x = w;
+
+      do {
+        p_xp = center_x + dx;
+        p_yp = y + dy;
+
+        // Line
+        it.point(p_xp, p_yp, GREEN);
+
+        // Filler
+        if(p_xp <= now_px) {
+          it.line(p_xp, y, p_xp, p_yp, GREEN);
+        }
+
+        // Sun
+        if (now_px == p_xp) {
+          ESP_LOGI("Sun", "%d,%d", p_xp, p_yp);
+          sun_x = p_xp;
+          sun_y = p_yp;
+        }
+
+        e2 = err;
+        if (e2 < dy) {
+          err += ++dy * 2 + 1;
+          if (-dx == dy && e2 <= dx) {
+            e2 = 0;
+          }
+        }
+        if (e2 > dx) {
+          err += ++dx * 2 + 1;
+        }
+      } while (dx <= 0);
+
+      // Sun
+      // Draw last so it's always on top of other rendering
+      ESP_LOGI("Sun", "%d,%d", sun_x, sun_y);
+      it.filled_circle(sun_x, sun_y, 10, YELLOW);
+      it.circle(sun_x, sun_y, 10, ORANGE);
+      it.circle(sun_x, sun_y, 9, ORANGE);
+
+      // Text
+
+      x = sunrise_px;
+      y = y - (day_length / 2);
+      ESP_LOGI("Sunrise", "%s", id(sunrise).state.c_str());
+      ESP_LOGI("Sunrise", "%d,%d", x, y);
+      it.printf(x, y, id(font20), FOREGROUND, TextAlign::CENTER, "%s", id(sunrise).state.c_str());
+      x1 = x - 15, y1 = y - 33 - 7;
+      it.image(x1, y1, icon_sunrise, FOREGROUND, BACKGROUND);
+      it.line(x, y + 10, x, horizon - 50, FOREGROUND);
+
+      x = sunset_px;
+      ESP_LOGI("Sunset", "%s", id(sunset).state.c_str());
+      ESP_LOGI("Sunset", "%d,%d", x, y);
+      it.printf(x, y, id(font20), FOREGROUND, TextAlign::CENTER, "%s", id(sunset).state.c_str());
+      x1 = x - 15, y1 = y - 33 - 7;
+      it.image(x1, y1, icon_sunset, FOREGROUND, BACKGROUND);
+      it.line(x, y + 10, x, horizon - 50, FOREGROUND);
+
+      /*
+      x = dawn_px;
+      y = y - (day_length / 2);
+      ESP_LOGI("Dawn", "%s", id(dawn).state.c_str());
+      ESP_LOGI("Dawn", "%d,%d", x, y);
+      it.printf(x, y, id(font18), FOREGROUND, TextAlign::CENTER, "%s", id(dawn).state.c_str());
+      x1 = x - 15, y1 = y - 30 - 7;
+      it.image(x1, y1, icon_dawn, FOREGROUND, BACKGROUND);
+
+      x = dusk_px;
+      ESP_LOGI("Dusk", "%s", id(dusk).state.c_str());
+      ESP_LOGI("Dusk", "%d,%d", x, y);
+      it.printf(x, y, id(font18), FOREGROUND, TextAlign::CENTER, "%s", id(dusk).state.c_str());
+      x1 = x - 15, y1 = y - 30 - 7;
+      it.image(x1, y1, icon_dusk, FOREGROUND, BACKGROUND);
+      */
+
+      // Icon
+
+      x = (w / 2) - 25, y = h - 25 - 50 - 15;
+      if (id(filler_icon).has_state()) {
+        #define icon_str id(filler_icon)->state
+        ESP_LOGI("Icon", "%s", id(filler_icon).state.c_str());
+        if(icon_map.count(icon_str) && 
+          icon_color_map.count(icon_str)) {
+          it.image(x, y, id(&icon_map[icon_str]), id(&icon_color_map[icon_str]), BACKGROUND);
+        }
+      }
+
+      // Countdown
+
+      x = w / 2, y = h - 25;
+      it.printf(x, y, id(font20), FOREGROUND, TextAlign::CENTER, "%s", id(countdown).state.c_str());
